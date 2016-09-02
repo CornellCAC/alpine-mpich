@@ -1,64 +1,36 @@
-FROM alpine:3.4
-# In case the main package repositories are down, use the alternative base image:
-# FROM gliderlabs/alpine:3.4
+FROM nlknguyen/alpine-mpich:latest
 
-MAINTAINER Nikyle Nguyen <NLKNguyen@MSN.com>
+# # ------------------------------------------------------------
+# # Set up SSH Server 
+# # ------------------------------------------------------------
+ONBUILD USER root
 
-ARG REQUIRE="sudo build-base openssh"
-RUN apk update && apk upgrade \
-      && apk add --no-cache ${REQUIRE}
+# Add host keys
+ONBUILD RUN cd /etc/ssh/ && ssh-keygen -A -N ''
 
+# Config SSH Daemon
+ONBUILD RUN  sed -i "s/#PasswordAuthentication.*/PasswordAuthentication no/g" /etc/ssh/sshd_config \
+          && sed -i "s/#PermitRootLogin.*/PermitRootLogin no/g" /etc/ssh/sshd_config \
+          && sed -i "s/#UsePAM.*/UsePAM no/g" /etc/ssh/sshd_config \
+          && sed -i "s/#AuthorizedKeysFile/AuthorizedKeysFile/g" /etc/ssh/sshd_config
+ 
+# Unlock non-password USER to enable SSH login
+ONBUILD RUN passwd -u ${USER}
 
-#### INSTALL MPICH ####
-# Source is available at http://www.mpich.org/static/downloads/
+# Set up user's public and private keys
+ONBUILD ENV SSHDIR /home/${USER}/.ssh/
+ONBUILD RUN mkdir -p ${SSHDIR}
 
-# Build Options:
-# See installation guide of target MPICH version
-# Ex: http://www.mpich.org/static/downloads/3.2/mpich-3.2-installguide.pdf
-# These options are passed to the steps below
-ARG MPICH_VERSION="3.2"
-ARG MPICH_CONFIGURE_OPTIONS="--disable-fortran"
-ARG MPICH_MAKE_OPTIONS
+ONBUILD COPY ssh/ ${SSHDIR}/
+ONBUILD RUN cat ${SSHDIR}/*.pub >> ${SSHDIR}/authorized_keys
 
-# Download, build, and install MPICH
-RUN mkdir /tmp/mpich-src
-WORKDIR /tmp/mpich-src
-RUN wget http://www.mpich.org/static/downloads/${MPICH_VERSION}/mpich-${MPICH_VERSION}.tar.gz \
-      && tar xfz mpich-${MPICH_VERSION}.tar.gz  \
-      && cd mpich-${MPICH_VERSION}  \
-      && ./configure ${MPICH_CONFIGURE_OPTIONS}  \
-      && make ${MPICH_MAKE_OPTIONS} && make install \
-      && rm -rf /tmp/mpich-src
+ONBUILD RUN chmod -R 600 ${SSHDIR}* && \
+    chown -R ${USER}:${USER} ${SSHDIR}
 
+# Default working directory when user login 
+ONBUILD RUN echo "cd $WORKDIR" >> /home/${USER}/.profile
 
-#### TEST MPICH INSTALLATION ####
-RUN mkdir /tmp/mpich-test
-WORKDIR /tmp/mpich-test
-COPY mpich-test .
-RUN sh test.sh
-RUN rm -rf /tmp/mpich-test
-
-
-#### CLEAN UP ####
-WORKDIR /
-RUN rm -rf /tmp/*
-
-
-#### ADD DEFAULT USER ####
-ARG USER=mpi
-ENV USER ${USER}
-RUN adduser -D ${USER} \
-      && echo "${USER}   ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-
-
-#### CREATE WORKING DIRECTORY FOR USER ####
-ARG WORKDIR=/project
-ENV WORKDIR ${WORKDIR}
-RUN mkdir ${WORKDIR}
-RUN chown -R ${USER} ${WORKDIR}
-
-WORKDIR ${WORKDIR}
-USER ${USER}
-
-
-CMD ["/bin/ash"]
+# # ------------------------------------------------------------
+# # Switch back to default user when continue the build process
+# # ------------------------------------------------------------
+ONBUILD USER ${USER}
