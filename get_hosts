@@ -1,8 +1,5 @@
 #!/bin/sh
 
-search_pattern='mpi_worker'
-if [ "$1" != "" ]; then
-  search_pattern="$1"
-fi
+search_pattern=${1:-mpi_worker} 
 
 grep -E "$(hostname)|$search_pattern" /etc/hosts | awk '{print $1}' | sort -u

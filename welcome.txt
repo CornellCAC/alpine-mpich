@@ -23,12 +23,11 @@
 Welcome to Alpine MPICH Cluster!
 
 The hostfile `hosts` is created at the current directory, and it contains
-a list of IP addresses for all nodes in the cluster. To recreate this:
+the list of IP addresses for all nodes in the cluster. To recreate this:
 $ get_hosts > hosts
 
 Example how to run MPI program in the cluster:
 $ mpirun -f hosts hostname
 
 For more information: https://github.com/NLKNguyen/alpine-mpich-cluster
-
 
