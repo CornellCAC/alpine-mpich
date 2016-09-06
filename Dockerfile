@@ -22,14 +22,25 @@ RUN chmod +x /usr/local/bin/get_hosts
 # # Miscellaneous setup for better user experience
 # # ------------------------------------------------------------
 
-# Default hostfile location for mpirun. This file will be updated automatically.
-ENV HYDRA_HOST_FILE /etc/opt/machines
+
 
 # Set welcome message to display when user ssh login 
 COPY welcome.txt /etc/motd
 
-# Default working directory when user ssh login 
+# Default hostfile location for mpirun. This file will be updated automatically.
+ENV HYDRA_HOST_FILE /etc/opt/hosts
+
+RUN touch ${HYDRA_HOST_FILE}
+RUN chown ${USER}:${USER} ${HYDRA_HOST_FILE}
+
+# Set environment variable. Hydra will use this as default host file location.
+RUN echo "export HYDRA_HOST_FILE=${HYDRA_HOST_FILE}"              >> ${USER_HOME}/.profile
+# Auto run watch to keep updating default host file of connected hosts every 2 second in background
+RUN echo "watch \"get_hosts > $HYDRA_HOST_FILE\" &>/dev/null &"   >> ${USER_HOME}/.profile
+
+# Auto go to default working directory when user ssh login 
 RUN echo "cd $WORKDIR" >> ${USER_HOME}/.profile
+
 
 
 # # ------------------------------------------------------------

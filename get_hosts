@@ -1,8 +1,22 @@
 #!/bin/sh
-(                                                                  \
-  grep -E "$(hostname)" /etc/hosts | cut -f1                       \
-  &                                                                \
-  netstat -tn | grep ESTABLISHED | awk '{print $5}' | cut -d: -f1  \
-  | sed -n "/$(echo $SSH_CLIENT | awk '{ print $1 }')/!pg" ;       \
-)                                                                  \
-| sort -u
+
+# Currently logged in users are visible via netstat
+worker_ips=$(netstat -tn | grep ESTABLISHED | awk '{print $5}' | cut -d: -f1)
+# ^ might include ssh client IP which is not a MPI worker host, so 
+# we remove that ssh client IP from the list by the following:
+
+# When a user SSH in, the env variable SSH_CLIENT is set to the client's IP
+ssh_client_ip=$(echo "$SSH_CLIENT" | awk '{ print $1 }')
+
+# if ssh_client_ip is not empty, then remove that from worker_ips
+# (if docker exec in the container, SSH_CLIENT is not set, thus empty)
+if [ $(echo "$ssh_client_ip" | tr -d ' \n\r\t ' | wc -c) -ne 0 ]; then
+  worker_ips=$(echo "$worker_ips" | sed -n "/$ssh_client_ip/!pg" )
+  #             print every line that doesn't have a match  ^^^
+fi
+
+# Current host IP is assumed to be declared in /etc/hosts
+host_ip=$(grep -E "$(hostname)" /etc/hosts | cut -f1 )
+
+# Output the list of unique IPs of mpi_master and mpi_workers in the cluster
+printf "$host_ip\n$worker_ips" | sort -u

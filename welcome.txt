@@ -22,7 +22,7 @@
 
 Welcome to Alpine MPICH Cluster!
 
-The default host file is automatically updated at /etc/opt/machines 
+The default host file is automatically updated at /etc/opt/hosts 
 It contains the list of IP addresses for all nodes in the cluster. 
 
 Try this to see all host names in the cluster:

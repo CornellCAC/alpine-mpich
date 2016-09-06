@@ -1,7 +1,4 @@
 #!/bin/sh
 
-# Keep updating hostfile of connected hosts every 2 second in background
-watch "get_hosts > /etc/opt/machines" &>/dev/null &
-
 # Start ssh server
-/usr/sbin/sshd -D -e
+/usr/sbin/sshd -D
