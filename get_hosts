@@ -1,5 +1,8 @@
 #!/bin/sh
-
-search_pattern=${1:-mpi_worker} 
-
-grep -E "$(hostname)|$search_pattern" /etc/hosts | awk '{print $1}' | sort -u
+(                                                                  \
+  grep -E "$(hostname)" /etc/hosts | cut -f1                       \
+  &                                                                \
+  netstat -tn | grep ESTABLISHED | awk '{print $5}' | cut -d: -f1  \
+  | sed -n "/$(echo $SSH_CLIENT | awk '{ print $1 }')/!pg" ;       \
+)                                                                  \
+| sort -u
